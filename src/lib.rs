@@ -97,6 +97,7 @@ struct SCT<'a> {
     timestamp: u64,
     sig_alg: u16,
     sig: &'a [u8],
+    exts: &'a [u8],
 }
 
 const ECDSA_NISTP256_SHA256: u16 = 0x0403;
@@ -146,13 +147,12 @@ impl<'a> SCT<'a> {
                 let timestamp = rd.skip_and_get_input(8)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u64)?;
+
                 let ext_len = rd.skip_and_get_input(2)
                     .map_err(|_| Error::MalformedSCT)
                     .map(decode_u16)?;
-
-                if ext_len != 0 {
-                    return Err(Error::UnsupportedSCTVersion);
-                }
+                let exts = rd.skip_and_get_input(ext_len as usize)
+                    .map_err(|_| Error::MalformedSCT)?;
 
                 let sig_alg = rd.skip_and_get_input(2)
                     .map_err(|_| Error::MalformedSCT)
@@ -168,6 +168,7 @@ impl<'a> SCT<'a> {
                     timestamp: timestamp,
                     sig_alg: sig_alg,
                     sig: sig.as_slice_less_safe(),
+                    exts: exts.as_slice_less_safe(),
                 };
 
                 Ok(ret)
@@ -175,7 +176,10 @@ impl<'a> SCT<'a> {
     }
 }
 
-pub fn verify_sct(cert: &[u8], encoded_sct: &[u8], at_time: u64, logs: &[&Log]) -> Result<usize, Error> {
+pub fn verify_sct(cert: &[u8],
+                  encoded_sct: &[u8],
+                  at_time: u64,
+                  logs: &[&Log]) -> Result<usize, Error> {
     let sct = SCT::parse(encoded_sct)?;
     let i = lookup(logs, &sct.log_id)?;
     let log = logs[i];
@@ -199,14 +203,36 @@ mod tests {
         mmd: 86400,
     };
 
+    static SYMANTEC_LOG: super::Log = super::Log {
+        description: "Symantec log",
+        url: "ct.ws.symantec.com/",
+        operated_by: "Symantec",
+        key: include_bytes!("testdata/symantec-log-pubkey.bin"),
+        id: [221, 235, 29, 43, 122, 13, 79, 166, 32, 139, 129, 173, 129, 104, 112, 126, 46, 142, 157, 1, 213, 92, 136, 141, 61, 17, 196, 205, 182, 236, 190, 204],
+        mmd: 86400,
+    };
+
     #[test]
-    fn it_works() {
+    fn test_google_sct0() {
         let sct = include_bytes!("testdata/google-sct0.bin");
         let cert = include_bytes!("testdata/google-cert.bin");
-        let logs = [&GOOGLE_PILOT];
+        let logs = [&GOOGLE_PILOT, &SYMANTEC_LOG];
         let now = 1499619463644;
 
-        super::verify_sct(cert, sct, now, &logs)
-            .unwrap();
+        assert_eq!(0,
+                   super::verify_sct(cert, sct, now, &logs)
+                       .unwrap());
+    }
+
+    #[test]
+    fn test_google_sct1() {
+        let sct = include_bytes!("testdata/google-sct1.bin");
+        let cert = include_bytes!("testdata/google-cert.bin");
+        let logs = [&GOOGLE_PILOT, &SYMANTEC_LOG];
+        let now = 1499619463644;
+
+        assert_eq!(1,
+                   super::verify_sct(cert, sct, now, &logs)
+                       .unwrap());
     }
 }
