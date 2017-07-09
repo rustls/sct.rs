@@ -1,5 +1,5 @@
 [package]
-name = "transparent"
+name = "sct"
 version = "0.1.0"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Certificate transparency SCT verification library"
