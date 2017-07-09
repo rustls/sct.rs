@@ -1,0 +1,6 @@
+[package]
+name = "transparent"
+version = "0.1.0"
+authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
+
+[dependencies]
