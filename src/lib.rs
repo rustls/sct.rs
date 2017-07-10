@@ -1,9 +1,18 @@
+//! # SCT.rs: SCT verification library
+//! This library implements verification of Signed Certificate Timestamps.
+//! These are third-party assurances that a particular certificate has
+//! been included in a Certificate Transparency log.
+//!
+//! See RFC6962 for the details of the formats implemented here.
+//!
+//! It is intended to be useful to libraries which perform certificate
+//! validation, OCSP libraries, and TLS libraries.
 
 #![forbid(unsafe_code,
           unstable_features)]
 #![deny(trivial_casts,
         trivial_numeric_casts,
-//        missing_docs,
+        missing_docs,
         unused_import_braces,
         unused_extern_crates,
         unused_qualifications)]
@@ -11,38 +20,79 @@
 extern crate ring;
 extern crate untrusted;
 
-use std::io::Write;
-
 /// Describes a CT log
+///
+/// This structure contains some metadata fields not used by the library.
+/// Rationale: it makes sense to keep this metadata with the other
+/// values for review purposes.
 #[derive(Debug)]
 pub struct Log<'a> {
-    description: &'a str,
-    url: &'a str,
-    operated_by: &'a str,
-    key: &'a [u8],
-    id: [u8; 32],
-    mmd: usize
+    /// The operator's name/description of the log.
+    /// This field is not used by the library.
+    pub description: &'a str,
+
+    /// The certificate submission url.
+    /// This field is not used by the library.
+    pub url: &'a str,
+
+    /// Which entity operates the log.
+    /// This field is not used by the library.
+    pub operated_by: &'a str,
+
+    /// Public key usable for verifying certificates.
+    /// TODO: fixme format of this; should be a SPKI
+    /// so the `id` is verifiable, but currently is a
+    /// raw public key (like, an ECPoint or RSAPublicKey).
+    pub key: &'a [u8],
+
+    /// Key hash, which is SHA256 applied to the SPKI
+    /// encoding.
+    pub id: [u8; 32],
+
+    /// The log's maximum merge delay.
+    /// This field is not used by the library.
+    pub max_merge_delay: usize
 }
 
-impl<'a> Log<'a> {
-    pub fn get_log_id(&self) -> [u8; 32] {
-        let mut ret = [0u8; 32];
-        let d = ring::digest::digest(&ring::digest::SHA256, self.key);
-        ret.as_mut()
-            .write_all(d.as_ref())
-            .unwrap();
-        ret
-    }
-}
-
+/// How sct.rs reports errors.
 #[derive(Debug, Clone, Copy)]
 pub enum Error {
+    /// The SCT was somehow misencoded, truncated or otherwise corrupt.
     MalformedSCT,
-    UnsupportedSCTVersion,
+
+    /// The SCT contained an invalid signature.
     InvalidSignature,
+
+    /// The SCT referenced a Log that has an invalid public key encoding.
     InvalidKey,
+
+    /// The SCT was signed in the future.  Clock skew?
     SCTTimestampInFuture,
+
+    /// The SCT had a version that this library does not handle.
+    UnsupportedSCTVersion,
+
+    /// The SCT was refers to an unknown log.
     UnknownLog,
+}
+
+impl Error {
+    /// Applies a suggested policy for error handling:
+    ///
+    /// Returns `true` if the error should end processing
+    /// for whatever the SCT is attached to (like, abort a TLS
+    /// handshake).
+    ///
+    /// Returns `false` if this error should be a 'soft failure'
+    /// -- the SCT is unverifiable with this library and set of
+    /// logs.
+    pub fn should_be_fatal(&self) -> bool {
+        match *self {
+            Error::UnknownLog
+                | Error::UnsupportedSCTVersion => false,
+            _ => true
+        }
+    }
 }
 
 fn lookup(logs: &[&Log], id: &[u8]) -> Result<usize, Error> {
@@ -176,11 +226,18 @@ impl<'a> SCT<'a> {
     }
 }
 
+/// Verifies that the SCT `sct` (a `SignedCertificateTimestamp` encoding)
+/// is a correctly signed timestamp for `cert` (a DER-encoded X.509 end-entity
+/// certificate) valid `at_time`.  `logs` describe the CT logs trusted by
+/// the caller to sign such an SCT.
+///
+/// On success, this function returns the log used as an index into `logs`.
+/// Otherwise, it returns an `Error`.
 pub fn verify_sct(cert: &[u8],
-                  encoded_sct: &[u8],
+                  sct: &[u8],
                   at_time: u64,
                   logs: &[&Log]) -> Result<usize, Error> {
-    let sct = SCT::parse(encoded_sct)?;
+    let sct = SCT::parse(sct)?;
     let i = lookup(logs, &sct.log_id)?;
     let log = logs[i];
     sct.verify(log.key, cert)?;
@@ -194,7 +251,9 @@ pub fn verify_sct(cert: &[u8],
 
 #[cfg(test)]
 mod tests {
-    static GOOGLE_PILOT: super::Log = super::Log {
+    use super::{Log, verify_sct};
+
+    static GOOGLE_PILOT: Log = Log {
         description: "Google 'Pilot' log",
         url: "ct.googleapis.com/pilot/",
         operated_by: "Google",
@@ -203,7 +262,7 @@ mod tests {
         mmd: 86400,
     };
 
-    static SYMANTEC_LOG: super::Log = super::Log {
+    static SYMANTEC_LOG: Log = Log {
         description: "Symantec log",
         url: "ct.ws.symantec.com/",
         operated_by: "Symantec",
@@ -220,7 +279,7 @@ mod tests {
         let now = 1499619463644;
 
         assert_eq!(0,
-                   super::verify_sct(cert, sct, now, &logs)
+                   verify_sct(cert, sct, now, &logs)
                        .unwrap());
     }
 
@@ -232,7 +291,7 @@ mod tests {
         let now = 1499619463644;
 
         assert_eq!(1,
-                   super::verify_sct(cert, sct, now, &logs)
+                   verify_sct(cert, sct, now, &logs)
                        .unwrap());
     }
 }
