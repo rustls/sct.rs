@@ -55,7 +55,7 @@ pub struct Log<'a> {
 }
 
 /// How sct.rs reports errors.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Error {
     /// The SCT was somehow misencoded, truncated or otherwise corrupt.
     MalformedSCT,
