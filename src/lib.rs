@@ -150,7 +150,10 @@ struct SCT<'a> {
     exts: &'a [u8],
 }
 
-const ECDSA_NISTP256_SHA256: u16 = 0x0403;
+const ECDSA_SHA256: u16 = 0x0403;
+const ECDSA_SHA384: u16 = 0x0503;
+const RSA_PKCS1_SHA256: u16 = 0x0401;
+const RSA_PKCS1_SHA384: u16 = 0x0501;
 const SCT_V1: u8 = 0u8;
 const SCT_TIMESTAMP: u8 = 0u8;
 const SCT_X509_ENTRY: [u8; 2] = [0, 0];
@@ -158,8 +161,11 @@ const SCT_NO_EXTENSION: [u8; 2] = [0, 0];
 
 impl<'a> SCT<'a> {
     fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
-        let alg = match self.sig_alg {
-            ECDSA_NISTP256_SHA256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
+        let alg: &ring::signature::VerificationAlgorithm = match self.sig_alg {
+            ECDSA_SHA256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
+            ECDSA_SHA384 => &ring::signature::ECDSA_P384_SHA384_ASN1,
+            RSA_PKCS1_SHA256 => &ring::signature::RSA_PKCS1_2048_8192_SHA256,
+            RSA_PKCS1_SHA384 => &ring::signature::RSA_PKCS1_2048_8192_SHA384,
             _ => return Err(Error::InvalidSignature)
         };
 
