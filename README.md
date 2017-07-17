@@ -5,7 +5,7 @@ It uses [*ring*](https://github.com/briansmith/ring) for cryptography.
 [![Build Status](https://travis-ci.org/ctz/sct.rs.svg?branch=master)](https://travis-ci.org/ctz/sct.rs)
 
 # Status
-Under construction and insufficiently tested.  Don't use yet.
+Ready for early use and testing.
 
 # License
 SCT.rs is distributed under the following three licenses:
