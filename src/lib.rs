@@ -63,11 +63,8 @@ pub enum Error {
     /// The SCT contained an invalid signature.
     InvalidSignature,
 
-    /// The SCT referenced a Log that has an invalid public key encoding.
-    InvalidKey,
-
     /// The SCT was signed in the future.  Clock skew?
-    SCTTimestampInFuture,
+    TimestampInFuture,
 
     /// The SCT had a version that this library does not handle.
     UnsupportedSCTVersion,
@@ -141,6 +138,11 @@ fn write_u24(v: u32, out: &mut Vec<u8>) {
     out.push(v as u8);
 }
 
+fn write_u16(v: u16, out: &mut Vec<u8>) {
+    out.push((v >> 8) as u8);
+    out.push(v as u8);
+}
+
 #[derive(Debug)]
 struct SCT<'a> {
     log_id: &'a [u8],
@@ -157,7 +159,6 @@ const RSA_PKCS1_SHA384: u16 = 0x0501;
 const SCT_V1: u8 = 0u8;
 const SCT_TIMESTAMP: u8 = 0u8;
 const SCT_X509_ENTRY: [u8; 2] = [0, 0];
-const SCT_NO_EXTENSION: [u8; 2] = [0, 0];
 
 impl<'a> SCT<'a> {
     fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
@@ -176,7 +177,8 @@ impl<'a> SCT<'a> {
         data.extend_from_slice(&SCT_X509_ENTRY);
         write_u24(cert.len() as u32, &mut data);
         data.extend_from_slice(cert);
-        data.extend_from_slice(&SCT_NO_EXTENSION);
+        write_u16(self.exts.len() as u16, &mut data);
+        data.extend_from_slice(self.exts);
 
         let sig = untrusted::Input::from(self.sig);
         let data = untrusted::Input::from(&data);
@@ -249,7 +251,7 @@ pub fn verify_sct(cert: &[u8],
     sct.verify(log.key, cert)?;
 
     if sct.timestamp > at_time {
-        return Err(Error::SCTTimestampInFuture);
+        return Err(Error::TimestampInFuture);
     }
 
     Ok(i)

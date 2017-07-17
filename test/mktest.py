@@ -26,12 +26,23 @@ class SCT(object):
     def sign(self, key, alg, cert):
         to_sign = struct.pack('!BBQHBH', self.version, self.type, self.timestamp, self.enttype, 0, len(cert)) \
                 + cert + self.exts
+        open('sigin.bin', 'w').write(to_sign)
 
         sig = subprocess.check_output(['openssl', 'dgst', '-' + SIGALG_HASH[alg], '-sign', key, 'sigin.bin'])
         self.sig = struct.pack('!HH', alg, len(sig)) + sig
 
     def encode(self):
         return struct.pack('!B32sQ', self.version, self.id, self.timestamp) + self.exts + self.sig
+
+    def copy(self):
+        c = SCT()
+        c.__dict__ = self.__dict__.copy()
+        return c
+
+    def having(self, **kwargs):
+        copy = self.copy()
+        copy.__dict__.update(**kwargs)
+        return copy
 
 def genrsa(len):
     priv, pub = 'rsa-%d-priv.pem' % len, 'rsa-%d-pub.pem' % len
@@ -98,11 +109,11 @@ def format_bytes(b):
     return ', '.join(map(lambda x: '0x%02x' % ord(x), b))
 
 keys = [
+    ('ecdsa_p256', genecdsa('prime256v1')),
+    ('ecdsa_p384', genecdsa('secp384r1')),
     ('rsa2048', genrsa(2048)),
     ('rsa3072', genrsa(3072)),
     ('rsa4096', genrsa(4096)),
-    ('ecdsa_p256', genecdsa('prime256v1')),
-    ('ecdsa_p384', genecdsa('secp384r1')),
 ]
 
 algs = dict(
@@ -113,13 +124,13 @@ algs = dict(
         ecdsa_p384 = SIGALG_ECDSA_SHA384
         )
 
-print 'use super::{Log, verify_sct};'
+print 'use super::{Log, Error, verify_sct};'
 print
 
 for name, (priv, pub) in keys:
     pubder = convert_der(pub)
     pubraw = pubder.replace('.der', '.raw')
-    open(pubraw, 'w').write(raw_public_key(open(pubder).read()))
+    open('../src/testdata/' + pubraw, 'w').write(raw_public_key(open(pubder).read()))
 
     print """static TEST_LOG_%s: Log = Log {
     description: "fake test %s log",
@@ -134,21 +145,84 @@ for name, (priv, pub) in keys:
         pubraw,
         format_bytes(keyhash(pub)))
 
+def emit_test(keyname, sctname, encoding, timestamp = 1235, expect = 'Ok(0)', extra = ''):
+    open('../src/testdata/%s-%s-sct.bin' % (keyname, sctname), 'w').write(encoding)
+
+    print """#[test]
+pub fn %(keyname)s_%(sctname)s() {
+    let sct = include_bytes!("testdata/%(keyname)s-%(sctname)s-sct.bin");
+    let cert = b"cert";
+    let logs = [&TEST_LOG_%(keyname_up)s];
+    let now = %(time)d;
+
+    assert_eq!(%(expect)s,
+               verify_sct(cert, sct, now, &logs));
+}
+""" % dict(time = timestamp,
+           sctname = sctname,
+           keyname = keyname,
+           keyname_up = keyname.upper(),
+           expect = expect)
+
+def emit_short_test(keyname, sctname, encoding, expect):
+    open('../src/testdata/%s-%s-sct.bin' % (keyname, sctname), 'w').write(encoding)
+
+    print """#[test]
+pub fn %(keyname)s_%(sctname)s() {
+    let sct = include_bytes!("testdata/%(keyname)s-%(sctname)s-sct.bin");
+    let cert = b"cert";
+    let logs = [&TEST_LOG_%(keyname_up)s];
+    let now = 1234;
+
+    for l in 0..%(len)d {
+        assert_eq!(%(expect)s,
+                   verify_sct(cert, &sct[..l], now, &logs));
+    }
+}
+""" % dict(sctname = sctname,
+           keyname = keyname,
+           keyname_up = keyname.upper(),
+           expect = expect,
+           len = len(encoding))
+
+# basic tests of each key type
 for name, (priv, pub) in keys:
     sct = SCT()
     sct.sign(priv, algs[name], 'cert')
     sct.id = keyhash(pub)
 
-    open('%s-basic-sct.bin' % name, 'w').write(sct.encode())
+    emit_test(name, 'basic', sct.encode())
 
-    print """#[test]
-pub fn test_basic_%s() {
-    let sct = include_bytes!("testdata/%s-basic-sct.bin");
-    let cert = b"cert";
-    let logs = [&TEST_LOG_%s];
-    let now = 1235;
-    
-    assert_eq!(0,
-               verify_sct(cert, sct, now, &logs).unwrap());
-}
-""" % (name, name, name.upper())
+    emit_test(name, 'wrongtime',
+            sct.having(timestamp = 123).encode(),
+            expect = 'Err(Error::InvalidSignature)')
+
+    sct.sign(priv, algs[name], 'adsqweqweqwekimqwelqwmel')
+    emit_test(name, 'wrongcert', sct.encode(), expect = 'Err(Error::InvalidSignature)')
+
+# other tests, only for a particular key type
+name, (priv, pub) = keys[0]
+
+sct = SCT()
+sct.sign(priv, algs[name], 'cert')
+sct.id = keyhash(pub)
+
+emit_test(name, 'junk',
+        sct.encode() + 'a',
+        expect = 'Err(Error::MalformedSCT)')
+emit_test(name, 'wrongid',
+        sct.having(id = '\x00' * 32).encode(),
+        expect = 'Err(Error::UnknownLog)')
+emit_test(name, 'version',
+        sct.having(version = 1).encode(),
+        expect = 'Err(Error::UnsupportedSCTVersion)')
+emit_test(name, 'future',
+        sct.encode(),
+        timestamp = 1233,
+        expect = 'Err(Error::TimestampInFuture)')
+emit_test(name, 'wrongext',
+        sct.having(exts = '\x00\x01A').encode(),
+        expect = 'Err(Error::InvalidSignature)')
+emit_short_test(name, 'short',
+        sct.encode(),
+        expect = 'Err(Error::MalformedSCT)')
