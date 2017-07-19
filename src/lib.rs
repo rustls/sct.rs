@@ -143,7 +143,6 @@ fn write_u16(v: u16, out: &mut Vec<u8>) {
     out.push(v as u8);
 }
 
-#[derive(Debug)]
 struct SCT<'a> {
     log_id: &'a [u8],
     timestamp: u64,
@@ -261,3 +260,5 @@ pub fn verify_sct(cert: &[u8],
 mod tests_google;
 #[cfg(test)]
 mod tests_generated;
+#[cfg(test)]
+mod tests;

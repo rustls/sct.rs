@@ -266,13 +266,24 @@ pub fn ecdsa_p256_wrongext() {
 }
 
 #[test]
+pub fn ecdsa_p256_badsigalg() {
+    let sct = include_bytes!("testdata/ecdsa_p256-badsigalg-sct.bin");
+    let cert = b"cert";
+    let logs = [&TEST_LOG_ECDSA_P256];
+    let now = 1235;
+
+    assert_eq!(Err(Error::InvalidSignature),
+               verify_sct(cert, sct, now, &logs));
+}
+
+#[test]
 pub fn ecdsa_p256_short() {
     let sct = include_bytes!("testdata/ecdsa_p256-short-sct.bin");
     let cert = b"cert";
     let logs = [&TEST_LOG_ECDSA_P256];
     let now = 1234;
 
-    for l in 0..118 {
+    for l in 0..121 {
         assert_eq!(Err(Error::MalformedSCT),
                    verify_sct(cert, &sct[..l], now, &logs));
     }

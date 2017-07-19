@@ -24,6 +24,7 @@ fn test_google_sct0() {
     let cert = include_bytes!("testdata/google-cert.bin");
     let logs = [&GOOGLE_PILOT, &SYMANTEC_LOG];
     let now = 1499619463644;
+    println!("Logs: {:?}", logs);
 
     assert_eq!(0,
                verify_sct(cert, sct, now, &logs)
@@ -36,6 +37,7 @@ fn test_google_sct1() {
     let cert = include_bytes!("testdata/google-cert.bin");
     let logs = [&GOOGLE_PILOT, &SYMANTEC_LOG];
     let now = 1499619463644;
+    println!("Logs: {:?}", logs);
 
     assert_eq!(1,
                verify_sct(cert, sct, now, &logs)

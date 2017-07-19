@@ -6,9 +6,11 @@ from os import path
 SIGALG_ECDSA_SHA256 = 0x0403
 SIGALG_ECDSA_SHA384 = 0x0503
 SIGALG_RSA_SHA256 = 0x0401
+SIGALG_RSA_SHA384 = 0x0501
 
 SIGALG_HASH = {
     SIGALG_RSA_SHA256: 'sha256',
+    SIGALG_RSA_SHA384: 'sha384',
     SIGALG_ECDSA_SHA256: 'sha256',
     SIGALG_ECDSA_SHA384: 'sha384',
 }
@@ -118,8 +120,8 @@ keys = [
 
 algs = dict(
         rsa2048 = SIGALG_RSA_SHA256,
-        rsa3072 = SIGALG_RSA_SHA256,
-        rsa4096 = SIGALG_RSA_SHA256,
+        rsa3072 = SIGALG_RSA_SHA384,
+        rsa4096 = SIGALG_RSA_SHA384,
         ecdsa_p256 = SIGALG_ECDSA_SHA256,
         ecdsa_p384 = SIGALG_ECDSA_SHA384
         )
@@ -223,6 +225,14 @@ emit_test(name, 'future',
 emit_test(name, 'wrongext',
         sct.having(exts = '\x00\x01A').encode(),
         expect = 'Err(Error::InvalidSignature)')
+emit_test(name, 'badsigalg',
+        sct.having(sig = '\x01\x02' + sct.sig[2:]).encode(),
+        expect = 'Err(Error::InvalidSignature)')
+
+# emit length test with extension, so we test length handling
+sct_short = sct.having(exts = '\x00\x02AB')
+sct_short.sign(priv, algs[name], 'cert')
+
 emit_short_test(name, 'short',
-        sct.encode(),
+        sct_short.encode(),
         expect = 'Err(Error::MalformedSCT)')
