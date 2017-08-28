@@ -8,7 +8,10 @@ It uses [*ring*](https://github.com/briansmith/ring) for cryptography.
 [![Crates.io](https://img.shields.io/crates/v/sct.svg)](https://crates.io/crates/sct)
 
 # Status
-Ready for early use and testing.
+Ready for use:
+
+- All intended features are implemented.
+- Tests achieve 100% line coverage and all reachable branches.
 
 # License
 SCT.rs is distributed under the following three licenses:
