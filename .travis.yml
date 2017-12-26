@@ -4,13 +4,17 @@ matrix:
     - os: linux
       dist: trusty
       sudo: required
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: COVERAGE=1
     - os: osx
 before_install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then admin/build-lcov ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then gem install coveralls-lcov ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install libclang-common-3.8-dev llvm-3.8-dev ; fi
+  - if [[ "$COVERAGE" == "1" ]]; then admin/build-lcov ; fi
+  - if [[ "$COVERAGE" == "1" ]]; then gem install coveralls-lcov ; fi
+  - if [[ "$COVERAGE" == "1" ]]; then sudo apt-get install libclang-common-3.8-dev llvm-3.8-dev ; fi
 script:
   - RUST_BACKTRACE=1 cargo test
   - RUST_BACKTRACE=1 cargo test --release
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then ./admin/coverage          ; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then coveralls-lcov final.info ; fi
+  - if [[ "$COVERAGE" == "1" ]]; then ./admin/coverage          ; fi
+  - if [[ "$COVERAGE" == "1" ]]; then coveralls-lcov final.info ; fi
