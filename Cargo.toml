@@ -11,4 +11,4 @@ categories = ["network-programming", "cryptography"]
 
 [dependencies]
 ring = "0.13.0-alpha4"
-untrusted = "0.6.1"
+untrusted = "0.6.2"
