@@ -143,12 +143,22 @@ fn write_u16(v: u16, out: &mut Vec<u8>) {
     out.push(v as u8);
 }
 
-struct SCT<'a> {
-    log_id: &'a [u8],
-    timestamp: u64,
-    sig_alg: u16,
-    sig: &'a [u8],
-    exts: &'a [u8],
+/// A parsed Signed Certificate Timestamp
+///
+/// This struct contains all the information you need to verify it was
+/// correctly signed by a trusted CT Log.
+#[derive(Debug)]
+pub struct SCT<'a> {
+    /// The CT log id
+    pub log_id: &'a [u8],
+    /// The timestamp when the SCT was signed.
+    pub timestamp: u64,
+    /// The algorithm that was used for signing.
+    pub sig_alg: u16,
+    /// The signature of the SCT.
+    pub sig: &'a [u8],
+    /// Additional extensions that you may want to parse.
+    pub exts: &'a [u8],
 }
 
 const ECDSA_SHA256: u16 = 0x0403;
@@ -160,7 +170,9 @@ const SCT_TIMESTAMP: u8 = 0u8;
 const SCT_X509_ENTRY: [u8; 2] = [0, 0];
 
 impl<'a> SCT<'a> {
-    fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
+    /// Verify the certificate was correctly signed using the public key of
+    /// a CT Log.
+    pub fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
         let alg: &ring::signature::VerificationAlgorithm = match self.sig_alg {
             ECDSA_SHA256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
             ECDSA_SHA384 => &ring::signature::ECDSA_P384_SHA384_ASN1,
@@ -187,7 +199,8 @@ impl<'a> SCT<'a> {
             .map_err(|_| Error::InvalidSignature)
     }
 
-    fn parse(enc: &'a [u8]) -> Result<SCT<'a>, Error> {
+    /// Parse a raw SCT into a struct for further processing.
+    pub fn parse(enc: &'a [u8]) -> Result<SCT<'a>, Error> {
         let inp = untrusted::Input::from(enc);
 
         inp.read_all(
