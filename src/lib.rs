@@ -17,9 +17,6 @@
         unused_extern_crates,
         unused_qualifications)]
 
-extern crate ring;
-extern crate untrusted;
-
 /// Describes a CT log
 ///
 /// This structure contains some metadata fields not used by the library.
