@@ -1,6 +1,6 @@
 [package]
 name = "sct"
-version = "0.5.0"
+version = "0.6.0-alpha.0"
 edition = "2018"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Certificate transparency SCT verification library"
@@ -11,5 +11,5 @@ repository = "https://github.com/ctz/sct.rs"
 categories = ["network-programming", "cryptography"]
 
 [dependencies]
-ring = "0.15.0-alpha4"
-untrusted = "0.7.0-alpha1"
+ring = "0.16.0"
+untrusted = "0.7.0"
