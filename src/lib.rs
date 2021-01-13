@@ -17,6 +17,12 @@
         unused_extern_crates,
         unused_qualifications)]
 
+#![no_std]
+
+extern crate alloc;
+
+use alloc::vec::Vec;
+
 /// Describes a CT log
 ///
 /// This structure contains some metadata fields not used by the library.
