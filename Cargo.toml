@@ -11,5 +11,5 @@ repository = "https://github.com/ctz/sct.rs"
 categories = ["network-programming", "cryptography"]
 
 [dependencies]
-ring = "0.16.0"
+ring = "0.16.20"
 untrusted = "0.7.0"
