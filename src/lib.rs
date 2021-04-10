@@ -8,15 +8,15 @@
 //! It is intended to be useful to libraries which perform certificate
 //! validation, OCSP libraries, and TLS libraries.
 
-#![forbid(unsafe_code,
-          unstable_features)]
-#![deny(trivial_casts,
-        trivial_numeric_casts,
-        missing_docs,
-        unused_import_braces,
-        unused_extern_crates,
-        unused_qualifications)]
-
+#![forbid(unsafe_code, unstable_features)]
+#![deny(
+    trivial_casts,
+    trivial_numeric_casts,
+    missing_docs,
+    unused_import_braces,
+    unused_extern_crates,
+    unused_qualifications
+)]
 #![no_std]
 
 extern crate alloc;
@@ -54,7 +54,7 @@ pub struct Log<'a> {
 
     /// The log's maximum merge delay.
     /// This field is not used by the library.
-    pub max_merge_delay: usize
+    pub max_merge_delay: usize,
 }
 
 /// How sct.rs reports errors.
@@ -88,9 +88,8 @@ impl Error {
     /// logs.
     pub fn should_be_fatal(&self) -> bool {
         match *self {
-            Error::UnknownLog
-                | Error::UnsupportedSCTVersion => false,
-            _ => true
+            Error::UnknownLog | Error::UnsupportedSCTVersion => false,
+            _ => true,
         }
     }
 }
@@ -108,14 +107,14 @@ fn lookup(logs: &[&Log], id: &[u8]) -> Result<usize, Error> {
 fn decode_u64(inp: untrusted::Input) -> u64 {
     let b = inp.as_slice_less_safe();
     assert_eq!(b.len(), 8);
-    (b[0] as u64) << 56 |
-        (b[1] as u64) << 48 |
-        (b[2] as u64) << 40 |
-        (b[3] as u64) << 32 |
-        (b[4] as u64) << 24 |
-        (b[5] as u64) << 16 |
-        (b[6] as u64) << 8 |
-        (b[7] as u64)
+    (b[0] as u64) << 56
+        | (b[1] as u64) << 48
+        | (b[2] as u64) << 40
+        | (b[3] as u64) << 32
+        | (b[4] as u64) << 24
+        | (b[5] as u64) << 16
+        | (b[6] as u64) << 8
+        | (b[7] as u64)
 }
 
 fn decode_u16(inp: untrusted::Input) -> u16 {
@@ -169,7 +168,7 @@ impl<'a> SCT<'a> {
             ECDSA_SHA384 => &ring::signature::ECDSA_P384_SHA384_ASN1,
             RSA_PKCS1_SHA256 => &ring::signature::RSA_PKCS1_2048_8192_SHA256,
             RSA_PKCS1_SHA384 => &ring::signature::RSA_PKCS1_2048_8192_SHA384,
-            _ => return Err(Error::InvalidSignature)
+            _ => return Err(Error::InvalidSignature),
         };
 
         let mut data = Vec::new();
@@ -191,46 +190,52 @@ impl<'a> SCT<'a> {
     fn parse(enc: &'a [u8]) -> Result<SCT<'a>, Error> {
         let inp = untrusted::Input::from(enc);
 
-        inp.read_all(
-            Error::MalformedSCT,
-            |rd| {
-                let version = rd.read_byte()
-                    .map_err(|_| Error::MalformedSCT)?;
-                if version != 0 {
-                    return Err(Error::UnsupportedSCTVersion);
-                }
+        inp.read_all(Error::MalformedSCT, |rd| {
+            let version = rd
+                .read_byte()
+                .map_err(|_| Error::MalformedSCT)?;
+            if version != 0 {
+                return Err(Error::UnsupportedSCTVersion);
+            }
 
-                let id = rd.read_bytes(32)
-                    .map_err(|_| Error::MalformedSCT)?;
-                let timestamp = rd.read_bytes(8)
-                    .map_err(|_| Error::MalformedSCT)
-                    .map(decode_u64)?;
+            let id = rd
+                .read_bytes(32)
+                .map_err(|_| Error::MalformedSCT)?;
+            let timestamp = rd
+                .read_bytes(8)
+                .map_err(|_| Error::MalformedSCT)
+                .map(decode_u64)?;
 
-                let ext_len = rd.read_bytes(2)
-                    .map_err(|_| Error::MalformedSCT)
-                    .map(decode_u16)?;
-                let exts = rd.read_bytes(ext_len as usize)
-                    .map_err(|_| Error::MalformedSCT)?;
+            let ext_len = rd
+                .read_bytes(2)
+                .map_err(|_| Error::MalformedSCT)
+                .map(decode_u16)?;
+            let exts = rd
+                .read_bytes(ext_len as usize)
+                .map_err(|_| Error::MalformedSCT)?;
 
-                let sig_alg = rd.read_bytes(2)
-                    .map_err(|_| Error::MalformedSCT)
-                    .map(decode_u16)?;
-                let sig_len = rd.read_bytes(2)
-                    .map_err(|_| Error::MalformedSCT)
-                    .map(decode_u16)?;
-                let sig = rd.read_bytes(sig_len as usize)
-                    .map_err(|_| Error::MalformedSCT)?;
+            let sig_alg = rd
+                .read_bytes(2)
+                .map_err(|_| Error::MalformedSCT)
+                .map(decode_u16)?;
+            let sig_len = rd
+                .read_bytes(2)
+                .map_err(|_| Error::MalformedSCT)
+                .map(decode_u16)?;
+            let sig = rd
+                .read_bytes(sig_len as usize)
+                .map_err(|_| Error::MalformedSCT)?;
 
-                let ret = SCT {
-                    log_id: id.as_slice_less_safe(),
-                    timestamp: timestamp,
-                    sig_alg: sig_alg,
-                    sig: sig.as_slice_less_safe(),
-                    exts: exts.as_slice_less_safe(),
-                };
+            let ret = SCT {
+                log_id: id.as_slice_less_safe(),
+                timestamp: timestamp,
+                sig_alg: sig_alg,
+                sig: sig.as_slice_less_safe(),
+                exts: exts.as_slice_less_safe(),
+            };
 
-                Ok(ret)
-            })
+            Ok(ret)
+        })
     }
 }
 
@@ -241,10 +246,7 @@ impl<'a> SCT<'a> {
 ///
 /// On success, this function returns the log used as an index into `logs`.
 /// Otherwise, it returns an `Error`.
-pub fn verify_sct(cert: &[u8],
-                  sct: &[u8],
-                  at_time: u64,
-                  logs: &[&Log]) -> Result<usize, Error> {
+pub fn verify_sct(cert: &[u8], sct: &[u8], at_time: u64, logs: &[&Log]) -> Result<usize, Error> {
     let sct = SCT::parse(sct)?;
     let i = lookup(logs, &sct.log_id)?;
     let log = logs[i];
@@ -258,8 +260,8 @@ pub fn verify_sct(cert: &[u8],
 }
 
 #[cfg(test)]
-mod tests_google;
+mod tests;
 #[cfg(test)]
 mod tests_generated;
 #[cfg(test)]
-mod tests;
+mod tests_google;
