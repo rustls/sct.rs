@@ -145,7 +145,7 @@ fn write_u16(v: u16, out: &mut Vec<u8>) {
     out.push(v as u8);
 }
 
-struct SCT<'a> {
+struct Sct<'a> {
     log_id: &'a [u8],
     timestamp: u64,
     sig_alg: u16,
@@ -161,7 +161,7 @@ const SCT_V1: u8 = 0u8;
 const SCT_TIMESTAMP: u8 = 0u8;
 const SCT_X509_ENTRY: [u8; 2] = [0, 0];
 
-impl<'a> SCT<'a> {
+impl<'a> Sct<'a> {
     fn verify(&self, key: &[u8], cert: &[u8]) -> Result<(), Error> {
         let alg: &dyn ring::signature::VerificationAlgorithm = match self.sig_alg {
             ECDSA_SHA256 => &ring::signature::ECDSA_P256_SHA256_ASN1,
@@ -187,7 +187,7 @@ impl<'a> SCT<'a> {
             .map_err(|_| Error::InvalidSignature)
     }
 
-    fn parse(enc: &'a [u8]) -> Result<SCT<'a>, Error> {
+    fn parse(enc: &'a [u8]) -> Result<Sct<'a>, Error> {
         let inp = untrusted::Input::from(enc);
 
         inp.read_all(Error::MalformedSct, |rd| {
@@ -226,7 +226,7 @@ impl<'a> SCT<'a> {
                 .read_bytes(sig_len as usize)
                 .map_err(|_| Error::MalformedSct)?;
 
-            let ret = SCT {
+            let ret = Sct {
                 log_id: id.as_slice_less_safe(),
                 timestamp,
                 sig_alg,
@@ -247,7 +247,7 @@ impl<'a> SCT<'a> {
 /// On success, this function returns the log used as an index into `logs`.
 /// Otherwise, it returns an `Error`.
 pub fn verify_sct(cert: &[u8], sct: &[u8], at_time: u64, logs: &[&Log]) -> Result<usize, Error> {
-    let sct = SCT::parse(sct)?;
+    let sct = Sct::parse(sct)?;
     let i = lookup(logs, &sct.log_id)?;
     let log = logs[i];
     sct.verify(log.key, cert)?;
