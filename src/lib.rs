@@ -168,10 +168,7 @@ impl<'a> Sct<'a> {
             _ => return Err(Error::InvalidSignature),
         };
 
-        let mut data = vec![
-            SCT_V1,
-            SCT_TIMESTAMP
-        ];
+        let mut data = vec![SCT_V1, SCT_TIMESTAMP];
         write_u64(self.timestamp, &mut data);
         data.extend_from_slice(&SCT_X509_ENTRY);
         write_u24(cert.len() as u32, &mut data);

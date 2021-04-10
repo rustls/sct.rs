@@ -43,3 +43,9 @@ fn test_google_sct1() {
 
     assert_eq!(1, verify_sct(cert, sct, now, &logs).unwrap());
 }
+
+#[test]
+fn test_log_is_debug() {
+    use alloc::format;
+    format!("{:?}", GOOGLE_PILOT);
+}
