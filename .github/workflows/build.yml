@@ -1,0 +1,147 @@
+on: [push, pull_request]
+name: sct.rs
+
+jobs:
+  build:
+    name: Build+test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # test a bunch of toolchains on ubuntu
+        rust:
+          - stable
+          - beta
+          - nightly
+          - 1.47.0 # our MSRV
+        os: [ubuntu-18.04]
+        # but only stable on macos/windows (slower platforms)
+        include:
+          - os: macos-latest
+            rust: stable
+          - os: windows-latest
+            rust: stable
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install ${{ matrix.rust }} toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - name: cargo build (debug; default features)
+        run: cargo build
+
+      - name: cargo test (debug; default features)
+        run: cargo test
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: cargo test (debug; all features)
+        run: cargo test --all-features
+        env:
+          RUST_BACKTRACE: 1
+
+      - name: cargo test (release; no run)
+        run: cargo test --release --no-run
+
+  coverage:
+    name: Measure coverage
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install LLVM12
+        run: |
+          curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
+          sudo apt-add-repository -y 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main'
+          sudo apt-get install -y clang-12
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          default: true
+
+      - name: Build lcov
+        run: admin/build-lcov
+
+      - name: Measure coverage
+        run: admin/coverage
+
+      - name: Report to codecov.io
+        uses: codecov/codecov-action@v1.0.10
+        with:
+          file: final.info
+          fail_ci_if_error: false
+
+  minver:
+    name: Check minimum versions
+    runs-on: ubuntu-18.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          default: true
+
+      - name: cargo test (debug; all features; -Z minimal-versions)
+        run: cargo -Z minimal-versions test --all-features
+
+  format:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2021-03-30
+          override: true
+          default: true
+      - name: Check formatting
+        run: |
+          ./admin/fmt -- --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          default: true
+          components: clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
+  clippy-nightly:
+    name: Clippy (Nightly)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Install rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+          default: true
+          components: clippy
+      - uses: actions-rs/cargo@v1
+        with:
+          command: clippy

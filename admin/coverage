@@ -1,43 +1,40 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 import os
 import glob
 import subprocess
 
-LLVM_PATH = glob.glob('/usr/lib/llvm-[37]*/lib/clang/*/lib/linux/')[0]
-COVERAGE_OPTIONS = '-Ccodegen-units=1 -Clink-dead-code -Cpasses=insert-gcov-profiling -Cpanic=abort -Zpanic-abort-tests -L%s -lclang_rt.profile-x86_64' % LLVM_PATH
+COVERAGE_OPTIONS = '-Ccodegen-units=1 -Clink-dead-code -Zprofile -Cpanic=abort -Zpanic-abort-tests -Zinstrument-coverage'
 LCOVOPTS = '--gcov-tool ./admin/llvm-gcov --rc lcov_excl_line=assert'.split()
+
+def check_call(*args, **kwargs):
+    subprocess.check_call(*args, **kwargs)
 
 def lcov_exe(*args):
     return ['lcov'] + LCOVOPTS + list(args)
 
 def sh(cmd):
-    subprocess.check_call(cmd, shell = True)
+    check_call(cmd, shell = True)
 
 def cleanup():
     sh('cargo clean')
     sh("rm -rf *.gcda *.gcno")
 
 def run(which):
-    exe = filter(lambda x: '.d' not in x, glob.glob('target/debug/deps/' + which + '-*'))[0]
+    exe = filter(lambda x: '.' not in x, glob.glob('target/debug/deps/' + which + '-*'))[0]
     sh('./' + exe)
 
-def cargo():
-    # run stable cargo, because nightly is oft-broken
-    out = subprocess.check_output(['rustup', 'run', 'stable', 'rustup', 'which', 'cargo'])
-    return out.strip()
-
 def rustc(*args):
-    exe = [cargo(), 'rustc', '--all-features'] + list(args)
+    exe = ['cargo', 'rustc', '--all-features'] + list(args)
     env = dict(os.environ)
     env.update(RUSTC_WRAPPER = './admin/coverage-rustc',
                COVERAGE_OPTIONS = COVERAGE_OPTIONS,
                CARGO_INCREMENTAL = '0')
-    subprocess.check_call(exe, env = env)
+    check_call(exe, env = env)
 
 def lcov(outfile):
     exe = lcov_exe('--capture', '--directory', '.', '--base-directory', '.', '-o', outfile)
-    subprocess.check_call(exe)
+    check_call(exe)
     return outfile
 
 def merge(outfile, infiles):
@@ -47,23 +44,36 @@ def merge(outfile, infiles):
         arg.append(i)
     arg.append('-o')
     arg.append(outfile)
-    subprocess.check_call(lcov_exe(*arg))
+    check_call(lcov_exe(*arg))
+
+def remove(outfile, infile, pattern):
+    check_call(lcov_exe('--remove', infile, os.getcwd() + pattern, '-o', outfile))
 
 def extract(outfile, infile):
-    subprocess.check_call(lcov_exe('--extract', infile, os.getcwd() + '/src/*', '-o', outfile))
+    check_call(lcov_exe('--extract', infile, os.getcwd() + '/src/*', '-o', outfile))
 
 def genhtml(outdir, infile):
-    subprocess.check_call(['genhtml', '--branch-coverage', '--demangle-cpp', '--legend',
+    check_call(['genhtml', '--branch-coverage', '--demangle-cpp', '--legend',
         infile, '-o', outdir, '--ignore-errors', 'source'])
+
+def rustc_llvm_version():
+    lines = subprocess.check_output(['rustc', '-vV']).decode('ascii').splitlines()
+    ln = [ln for ln in lines if ln.split(':', 1)[0] == 'LLVM version'][0]
+    return int(ln.split(':')[1].split('.')[0].strip())
+
+LLVM_VERSION = 12
+llvm_version = rustc_llvm_version()
+if llvm_version != LLVM_VERSION:
+    print('expected rustc to use LLVM {}, found {}'.format(LLVM_VERSION, llvm_version))
+    raise SystemExit(-1)
 
 all_infos = []
 
 # unit tests
-cleanup()
 rustc('--profile', 'test', '--lib')
 run('sct')
 all_infos.append(lcov('sct.info'))
 
-merge('coverage.info', all_infos)
-extract('final.info', 'coverage.info')
+merge('merged.info', all_infos)
+extract('final.info', 'merged.info')
 genhtml('target/coverage/', 'final.info')
