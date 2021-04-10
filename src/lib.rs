@@ -61,7 +61,7 @@ pub struct Log<'a> {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Error {
     /// The SCT was somehow misencoded, truncated or otherwise corrupt.
-    MalformedSCT,
+    MalformedSct,
 
     /// The SCT contained an invalid signature.
     InvalidSignature,
@@ -70,7 +70,7 @@ pub enum Error {
     TimestampInFuture,
 
     /// The SCT had a version that this library does not handle.
-    UnsupportedSCTVersion,
+    UnsupportedSctVersion,
 
     /// The SCT was refers to an unknown log.
     UnknownLog,
@@ -88,7 +88,7 @@ impl Error {
     /// logs.
     pub fn should_be_fatal(&self) -> bool {
         match *self {
-            Error::UnknownLog | Error::UnsupportedSCTVersion => false,
+            Error::UnknownLog | Error::UnsupportedSctVersion => false,
             _ => true,
         }
     }
@@ -190,46 +190,46 @@ impl<'a> SCT<'a> {
     fn parse(enc: &'a [u8]) -> Result<SCT<'a>, Error> {
         let inp = untrusted::Input::from(enc);
 
-        inp.read_all(Error::MalformedSCT, |rd| {
+        inp.read_all(Error::MalformedSct, |rd| {
             let version = rd
                 .read_byte()
-                .map_err(|_| Error::MalformedSCT)?;
+                .map_err(|_| Error::MalformedSct)?;
             if version != 0 {
-                return Err(Error::UnsupportedSCTVersion);
+                return Err(Error::UnsupportedSctVersion);
             }
 
             let id = rd
                 .read_bytes(32)
-                .map_err(|_| Error::MalformedSCT)?;
+                .map_err(|_| Error::MalformedSct)?;
             let timestamp = rd
                 .read_bytes(8)
-                .map_err(|_| Error::MalformedSCT)
+                .map_err(|_| Error::MalformedSct)
                 .map(decode_u64)?;
 
             let ext_len = rd
                 .read_bytes(2)
-                .map_err(|_| Error::MalformedSCT)
+                .map_err(|_| Error::MalformedSct)
                 .map(decode_u16)?;
             let exts = rd
                 .read_bytes(ext_len as usize)
-                .map_err(|_| Error::MalformedSCT)?;
+                .map_err(|_| Error::MalformedSct)?;
 
             let sig_alg = rd
                 .read_bytes(2)
-                .map_err(|_| Error::MalformedSCT)
+                .map_err(|_| Error::MalformedSct)
                 .map(decode_u16)?;
             let sig_len = rd
                 .read_bytes(2)
-                .map_err(|_| Error::MalformedSCT)
+                .map_err(|_| Error::MalformedSct)
                 .map(decode_u16)?;
             let sig = rd
                 .read_bytes(sig_len as usize)
-                .map_err(|_| Error::MalformedSCT)?;
+                .map_err(|_| Error::MalformedSct)?;
 
             let ret = SCT {
                 log_id: id.as_slice_less_safe(),
-                timestamp: timestamp,
-                sig_alg: sig_alg,
+                timestamp,
+                sig_alg,
                 sig: sig.as_slice_less_safe(),
                 exts: exts.as_slice_less_safe(),
             };

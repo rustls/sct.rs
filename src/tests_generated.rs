@@ -252,7 +252,7 @@ pub fn ecdsa_p256_junk() {
     let logs = [&TEST_LOG_ECDSA_P256];
     let now = 1235;
 
-    assert_eq!(Err(Error::MalformedSCT), verify_sct(cert, sct, now, &logs));
+    assert_eq!(Err(Error::MalformedSct), verify_sct(cert, sct, now, &logs));
 }
 
 #[test]
@@ -273,7 +273,7 @@ pub fn ecdsa_p256_version() {
     let now = 1235;
 
     assert_eq!(
-        Err(Error::UnsupportedSCTVersion),
+        Err(Error::UnsupportedSctVersion),
         verify_sct(cert, sct, now, &logs)
     );
 }
@@ -326,7 +326,7 @@ pub fn ecdsa_p256_short() {
 
     for l in 0..121 {
         assert_eq!(
-            Err(Error::MalformedSCT),
+            Err(Error::MalformedSct),
             verify_sct(cert, &sct[..l], now, &logs)
         );
     }
