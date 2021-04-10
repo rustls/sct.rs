@@ -21,7 +21,7 @@
 
 extern crate alloc;
 
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 
 /// Describes a CT log
 ///
@@ -87,16 +87,13 @@ impl Error {
     /// -- the SCT is unverifiable with this library and set of
     /// logs.
     pub fn should_be_fatal(&self) -> bool {
-        match *self {
-            Error::UnknownLog | Error::UnsupportedSctVersion => false,
-            _ => true,
-        }
+        !matches!(self, Error::UnknownLog | Error::UnsupportedSctVersion)
     }
 }
 
 fn lookup(logs: &[&Log], id: &[u8]) -> Result<usize, Error> {
     for (i, l) in logs.iter().enumerate() {
-        if id == &l.id {
+        if id == l.id {
             return Ok(i);
         }
     }
@@ -171,9 +168,10 @@ impl<'a> Sct<'a> {
             _ => return Err(Error::InvalidSignature),
         };
 
-        let mut data = Vec::new();
-        data.push(SCT_V1);
-        data.push(SCT_TIMESTAMP);
+        let mut data = vec![
+            SCT_V1,
+            SCT_TIMESTAMP
+        ];
         write_u64(self.timestamp, &mut data);
         data.extend_from_slice(&SCT_X509_ENTRY);
         write_u24(cert.len() as u32, &mut data);
