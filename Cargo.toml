@@ -9,6 +9,7 @@ readme = "README.md"
 homepage = "https://github.com/ctz/sct.rs"
 repository = "https://github.com/ctz/sct.rs"
 categories = ["network-programming", "cryptography"]
+exclude = ["/admin/"]
 
 [dependencies]
 ring = "0.16.0"
