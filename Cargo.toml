@@ -4,10 +4,10 @@ version = "0.7.0"
 edition = "2018"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Certificate transparency SCT verification library"
-license = "Apache-2.0/ISC/MIT"
+license = "Apache-2.0 OR ISC OR MIT"
 readme = "README.md"
-homepage = "https://github.com/ctz/sct.rs"
-repository = "https://github.com/ctz/sct.rs"
+homepage = "https://github.com/rustls/sct.rs"
+repository = "https://github.com/rustls/sct.rs"
 categories = ["network-programming", "cryptography"]
 exclude = ["/admin/"]
 
