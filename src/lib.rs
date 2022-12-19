@@ -186,16 +186,12 @@ impl<'a> Sct<'a> {
         let inp = untrusted::Input::from(enc);
 
         inp.read_all(Error::MalformedSct, |rd| {
-            let version = rd
-                .read_byte()
-                .map_err(|_| Error::MalformedSct)?;
+            let version = rd.read_byte().map_err(|_| Error::MalformedSct)?;
             if version != 0 {
                 return Err(Error::UnsupportedSctVersion);
             }
 
-            let id = rd
-                .read_bytes(32)
-                .map_err(|_| Error::MalformedSct)?;
+            let id = rd.read_bytes(32).map_err(|_| Error::MalformedSct)?;
             let timestamp = rd
                 .read_bytes(8)
                 .map_err(|_| Error::MalformedSct)
