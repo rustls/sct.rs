@@ -239,7 +239,7 @@ impl<'a> Sct<'a> {
 /// Otherwise, it returns an `Error`.
 pub fn verify_sct(cert: &[u8], sct: &[u8], at_time: u64, logs: &[&Log]) -> Result<usize, Error> {
     let sct = Sct::parse(sct)?;
-    let i = lookup(logs, &sct.log_id)?;
+    let i = lookup(logs, sct.log_id)?;
     let log = logs[i];
     sct.verify(log.key, cert)?;
 
