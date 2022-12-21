@@ -13,7 +13,7 @@ jobs:
           - beta
           - nightly
           - 1.56.0 # our MSRV
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest]
         # but only stable on macos/windows (slower platforms)
         include:
           - os: macos-latest
@@ -48,7 +48,7 @@ jobs:
 
   coverage:
     name: Measure coverage
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
@@ -80,7 +80,7 @@ jobs:
 
   minver:
     name: Check minimum versions
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
