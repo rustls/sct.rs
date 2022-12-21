@@ -13,7 +13,7 @@ jobs:
           - beta
           - nightly
           - 1.56.0 # our MSRV
-        os: [ubuntu-18.04]
+        os: [ubuntu-latest]
         # but only stable on macos/windows (slower platforms)
         include:
           - os: macos-latest
@@ -48,16 +48,10 @@ jobs:
 
   coverage:
     name: Measure coverage
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
-
-      - name: Install LLVM12
-        run: |
-          curl https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
-          sudo apt-add-repository -y 'deb http://apt.llvm.org/bionic/ llvm-toolchain-bionic-12 main'
-          sudo apt-get install -y clang-12
 
       - name: Install rust toolchain
         uses: actions-rs/toolchain@v1
@@ -65,22 +59,23 @@ jobs:
           toolchain: nightly
           override: true
           default: true
+          components: llvm-tools
 
-      - name: Build lcov
-        run: admin/build-lcov
+      - name: Install cargo-llvm-cov
+        run: cargo install cargo-llvm-cov
 
       - name: Measure coverage
-        run: admin/coverage
+        run: cargo llvm-cov --lcov --output-path ./lcov.info
 
       - name: Report to codecov.io
-        uses: codecov/codecov-action@v1.0.10
+        uses: codecov/codecov-action@v1
         with:
-          file: final.info
+          files: ./lcov.info
           fail_ci_if_error: false
 
   minver:
     name: Check minimum versions
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v2
