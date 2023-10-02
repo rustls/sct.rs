@@ -2,7 +2,7 @@
 name = "sct"
 version = "0.7.0"
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.61"
 authors = ["Joseph Birr-Pixton <jpixton@gmail.com>"]
 description = "Certificate transparency SCT verification library"
 license = "Apache-2.0 OR ISC OR MIT"
