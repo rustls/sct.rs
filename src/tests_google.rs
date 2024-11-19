@@ -47,5 +47,5 @@ fn test_google_sct1() {
 #[test]
 fn test_log_is_debug() {
     use alloc::format;
-    format!("{:?}", GOOGLE_PILOT);
+    let _ = format!("{:?}", GOOGLE_PILOT);
 }
