@@ -22,7 +22,7 @@ jobs:
             rust: stable
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install ${{ matrix.rust }} toolchain
         uses: dtolnay/rust-toolchain@master
@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -74,7 +74,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@nightly
@@ -87,7 +87,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -100,7 +100,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Install rust toolchain
         uses: dtolnay/rust-toolchain@nightly
         with:
